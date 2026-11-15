@@ -1,0 +1,1616 @@
+"""Generate the standalone Pendulum Physics Experiment web page."""
+
+from argparse import ArgumentParser
+from pathlib import Path
+
+
+# Write the web page next to this script by default.
+OUTPUT_FILE = Path(__file__).resolve().with_name("物理单摆实验.html")
+
+
+# Set the page title and define the original workshop styles.
+PAGE_HEAD = r'''<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#F3E7CF">
+  <title data-i="物理单摆实验">物理单摆实验</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #F3E7CF;
+      --sheet: #FFF8E8;
+      --edge: #CFB88C;
+      --ink: #352B24;
+      --muted: #76634E;
+      --wine: #843E3B;
+      --gold: #B48A49;
+      --green: #49634D;
+      --ui: "Microsoft JhengHei UI", "Microsoft JhengHei", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font: 13.333px/1.4 var(--ui); }
+    button, input, select { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: default; }
+    h1, h2, h3, p { margin: 0; }
+    h2, h3 { color: var(--wine); font-size: 16px; line-height: 1.35; }
+    button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 1px dashed var(--wine); outline-offset: -3px; }
+    .app { display: flex; flex-direction: column; min-height: 100vh; max-width: 1280px; margin: auto; }
+    .header { display: flex; align-items: center; gap: 14px; padding: 16px 24px 10px; }
+    #emblem { display: block; flex: 0 0 62px; width: 62px; height: 64px; }
+    .identity { flex: 1; min-width: 0; }
+    .identity p, .small, footer { color: var(--muted); font-size: 12px; }
+    .identity h1 { color: var(--wine); font-size: 29.333px; line-height: 1.24; margin-top: 2px; }
+    .languages { display: grid; grid-template-columns: repeat(3, 118px); gap: 6px; margin-right: 3px; }
+    .button { background: #EFE0C1; border: 1px solid var(--edge); padding: 7px 10px; min-height: 37px; min-width: 114px; border-radius: 0; }
+    .button:hover:not(:disabled) { background: #E6D1AC; }
+    .button:active:not(:disabled) { background: #D8BF93; }
+    .primary, .primary:hover { color: var(--sheet); background: var(--wine); border-color: var(--wine); font-weight: 700; }
+    .primary:hover:not(:disabled) { background: #9B504A; }
+    .primary:active:not(:disabled) { background: #612D2B; }
+    .languages .button { min-height: 41px; padding: 9px 12px; background: #EAD5B0; }
+    .languages .button[aria-pressed="true"] { color: var(--sheet); background: var(--wine); border-color: var(--wine); }
+    html[lang="en"] .languages .button { padding-inline: 4px; }
+    .notebook { flex: 1; display: flex; flex-direction: column; margin: 0 22px; min-width: 0; }
+    .tabs { display: flex; align-items: flex-end; padding-top: 5px; padding-left: 2px; }
+    .tabs button { padding: 9px 22px; min-height: 41px; background: #E8D5B1; color: var(--muted); border: 1px solid var(--edge); border-radius: 0; }
+    .tabs button[aria-current="page"] { background: var(--sheet); color: var(--wine); border-bottom-color: var(--sheet); position: relative; top: 1px; }
+    .panel { flex: 1; padding: 11px; margin: 0 2px 2px; border: 1px solid var(--edge); background: var(--sheet); }
+    #lab { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 14px; }
+    .controls h2 { margin: 5px 0 17px; line-height: 24px; }
+    .field { margin-top: 8px; }
+    .field label { display: flex; align-items: baseline; gap: 9px; min-height: 21px; }
+    .range { --fraction: 0%; position: relative; height: 35px; padding-inline: 13px; display: flex; align-items: flex-start; }
+    .range::before { content: ""; position: absolute; left: 13px; right: 13px; top: 14px; height: 4px; background: linear-gradient(to right, var(--gold) 0 var(--fraction), var(--edge) var(--fraction) 100%); }
+    .range::after { content: ""; position: absolute; left: 13px; right: 13px; top: 23px; height: 3px; border-inline: 1px solid var(--edge); background: linear-gradient(90deg, transparent calc(25% - .5px), var(--edge) 25%, transparent calc(25% + .5px), transparent calc(50% - .5px), var(--edge) 50%, transparent calc(50% + .5px), transparent calc(75% - .5px), var(--edge) 75%, transparent calc(75% + .5px)); pointer-events: none; }
+    .range input { appearance: none; position: absolute; inset: 0 5px; width: calc(100% - 10px); height: 32px; background: transparent; margin: 0; cursor: pointer; }
+    .range input::-webkit-slider-runnable-track { height: 16px; background: transparent; }
+    .range input::-moz-range-track { height: 16px; background: transparent; }
+    .range input::-webkit-slider-thumb { appearance: none; width: 17px; height: 17px; border: 1px solid #76572D; border-radius: 50%; background: radial-gradient(ellipse at 41% 35%, #E6CB8E 0 37%, var(--gold) 41%); }
+    .range input::-moz-range-thumb { width: 15px; height: 15px; border: 1px solid #76572D; border-radius: 50%; background: radial-gradient(ellipse at 41% 35%, #E6CB8E 0 37%, var(--gold) 41%); }
+    .row { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+    .planets { margin: 6px 2px 15px; gap: 4px; }
+    .planets button { flex: 1; }
+    .controls-actions { display: grid; gap: 5px; margin-block: 3px; }
+    .controls-actions .primary { margin-bottom: 1px; }
+    .speed { display: grid; justify-items: start; gap: 5px; margin-top: 15px; }
+    .speed label { min-height: 19px; }
+    select { border: 1px solid var(--edge); border-radius: 0; background: var(--sheet); min-width: 112px; height: 31px; padding: 5px; }
+    #defaults { display: block; width: 100%; margin: 12px 0 8px; }
+    .notes { display: flow-root; }
+    .notes h2 { margin: 8px 0 4px; line-height: 24px; }
+    .notes .small { line-height: 19px; }
+    .notes p + p { margin: 8px 0; }
+    .observations { min-width: 0; }
+    #stage, #chart { display: block; width: 100%; min-width: 0; }
+    #stage { height: clamp(220px, calc(75vh - 385px), 290px); }
+    #chart { height: clamp(150px, calc(25vh - 58px), 167px); }
+    .metrics { padding: 6px 8px; white-space: pre-wrap; min-height: 50px; }
+    .manuscript { margin: 9px 0 5px; line-height: 24px; }
+    .table-wrap { height: 111px; overflow: hidden scroll; border: 1px solid var(--edge); }
+    table { width: 100%; border-collapse: collapse; white-space: nowrap; text-align: center; font-size: 12px; table-layout: fixed; }
+    th, td { padding: 0 4px; height: 26px; }
+    th { background: #EBD9B7; position: sticky; top: 0; height: 27px; border-right: 1px solid var(--edge); font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+    th:first-child { width: 6%; }
+    th:nth-child(n+5) { width: 18%; }
+    tbody tr:nth-child(odd):not(.empty-row) { background: #F4E9D2; }
+    .record-actions { margin-top: 8px; }
+    #clear { margin-left: auto; }
+    #folios { display: grid; grid-template-columns: 244px minmax(0, 1fr); gap: 14px; }
+    .folio-rail { padding-top: 8px; background: var(--paper); }
+    .folio-rail h2 { font-size: 29.333px; line-height: 41px; margin-bottom: 6px; }
+    .folio-list { display: grid; gap: 8px; margin-top: 12px; }
+    .folio-rail > .small, .detail > .small:first-child { line-height: 19px; }
+    .folio-button { position: relative; display: block; width: 100%; height: 117px; border: 0; background: transparent; padding: 0; text-align: left; }
+    .folio-shadow, .folio-page, .folio-face, .folio-fold, .folio-binding { position: absolute; pointer-events: none; }
+    .folio-shadow { inset: 5px 3px 3px 4px; background: #DED0B3; }
+    .folio-page { inset: 0 6px 7px 0; background: var(--edge); clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%); }
+    .folio-face { inset: 1px; background: #F8EEDB; clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 0 100%); }
+    .folio-button[aria-pressed="true"] .folio-page, .folio-button:focus-visible .folio-page { background: var(--wine); }
+    .folio-button[aria-pressed="true"] .folio-face { inset: 2px; background: var(--sheet); }
+    .folio-fold { right: 7px; top: 1px; width: 14px; height: 14px; background: #E6D3AC; border: 1px solid var(--edge); clip-path: polygon(0 0, 100% 100%, 0 100%); }
+    .folio-binding { left: 2px; top: 2px; width: 4px; height: 106px; background: var(--gold); }
+    .folio-button[aria-pressed="true"] .folio-binding { background: var(--wine); }
+    .folio-title, .folio-state, .folio-count, .folio-progress { position: absolute; }
+    .folio-title { top: 12px; left: 18px; font-size: 14.667px; font-weight: 700; }
+    .folio-state { top: 39px; left: 18px; color: var(--muted); font-size: 12px; }
+    .folio-state.done { color: var(--green); }
+    .folio-count { top: 68px; left: 18px; color: var(--wine); font: 17.333px/1.2 Georgia, serif; }
+    .folio-progress { height: 4px; top: 77px; left: 93px; right: 23px; background: linear-gradient(to right, var(--green) 0 var(--progress), var(--edge) var(--progress) 100%); }
+    .folio-seal { position: absolute; top: 45px; right: 17px; display: grid; place-items: center; width: 47px; height: 47px; border: 2px solid var(--green); border-radius: 50%; outline: 1px solid var(--green); outline-offset: -6px; background: var(--sheet); color: var(--green); font-size: 10.667px; font-weight: 700; transform: rotate(-12deg); }
+    .detail { min-width: 0; padding: 12px 16px 16px 20px; max-height: max(500px, calc(100vh - 199px)); overflow: hidden scroll; }
+    .table-wrap::-webkit-scrollbar, .detail::-webkit-scrollbar { width: 14px; background: var(--paper); }
+    .table-wrap::-webkit-scrollbar-thumb, .detail::-webkit-scrollbar-thumb { background: #DEC69D; border: 1px solid var(--edge); }
+    #folio-title { font-size: 24px; line-height: 34px; margin: 5px 0 10px; }
+    #instruction { line-height: 21px; margin-bottom: 12px; }
+    .detail h3, .entry-label { line-height: 24px; }
+    .detail label.small { display: block; margin-top: 4px; line-height: 19px; }
+    .entry-label { display: block; color: var(--wine); font-size: 16px; font-weight: 700; }
+    .entry { display: block; border: 1px solid var(--edge); border-radius: 0; background: var(--sheet); width: 100%; padding: 7px; margin: 6px 0 10px; }
+    .entry[readonly] { background: #EEE0C4; }
+    .entry:disabled { background: #F3E7CF; opacity: 1; }
+    #presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 5px; margin: 3px 5px 13px 0; }
+    #presets .button { min-width: 0; }
+    #presets:empty { display: none; }
+    #folio-feedback { white-space: pre-line; line-height: 15.8px; margin-bottom: 14px; }
+    #conclusion { margin: 7px 0 12px; }
+    .folio-actions { display: grid; grid-template-columns: max-content max-content; gap: 7px; }
+    #free { grid-column: 1; justify-self: start; }
+    #import-report { grid-column: 2; grid-row: 2; justify-self: start; }
+    .persistence { white-space: pre-line; margin-top: 12px; }
+    footer { padding: 9px 24px; line-height: 19px; }
+    dialog { border: 1px solid var(--edge); background: var(--sheet); color: var(--ink); padding: 17px; max-width: min(410px, calc(100% - 26px)); }
+    dialog::backdrop { background: #352B2440; }
+    dialog p { margin: 10px 0 14px; }
+    dialog form { text-align: right; }
+    @media (max-width: 740px) {
+      .header { flex-wrap: wrap; padding-inline: 12px; }
+      .languages { margin-left: auto; grid-template-columns: repeat(3, auto); }
+      .notebook { margin-inline: 9px; }
+      #lab, #folios { grid-template-columns: minmax(0, 1fr); }
+      #stage { height: 240px; }
+      .detail { max-height: none; padding-inline: 0; overflow: visible; }
+      .folio-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .table-wrap { overflow: auto; }
+      .table-wrap table { min-width: 570px; }
+    }
+    @media (max-width: 410px) {
+      .identity h1, .folio-rail h2 { font-size: 24px; }
+      .folio-list { grid-template-columns: minmax(0, 1fr); }
+      #presets, .folio-actions { grid-template-columns: minmax(0, 1fr); }
+      #import-report { grid-column: 1; grid-row: auto; }
+    }
+  </style>
+</head>
+'''
+
+
+# Build the laboratory, inquiry folios, language controls and dialogs.
+PAGE_LAYOUT = r'''<body>
+  <div class="app">
+    <header class="header">
+      <canvas id="emblem" width="62" height="64" aria-hidden="true"></canvas>
+      <div class="identity">
+        <p data-i="自然哲学 · 交互实验手稿"></p>
+        <h1 data-i="物理单摆实验">物理单摆实验</h1>
+      </div>
+      <div class="languages" role="group" data-label="界面语言">
+        <button type="button" class="button" data-lang="zh-CN" data-i="简中">简中</button>
+        <button type="button" class="button" data-lang="zh-TW" data-i="繁中">繁中</button>
+        <button type="button" class="button" data-lang="en" lang="en">English</button>
+      </div>
+    </header>
+    <main class="notebook">
+      <nav class="tabs" data-label="工坊导航">
+        <button type="button" data-view="lab" data-i="单摆实验" aria-controls="lab" aria-current="page"></button>
+        <button type="button" data-view="folios" data-i="递进任务清单" aria-controls="folios"></button>
+      </nav>
+      <section id="lab" class="panel">
+        <aside class="controls" aria-labelledby="settings-title">
+          <h2 id="settings-title" data-i="实验参数"></h2>
+          <div class="field"><label for="length"><span data-i="摆长"></span><span id="length-value"></span></label><div class="range"><input id="length" type="range" min="0.2" max="2" step="0.0001" value="1" data-unit="m"></div></div>
+          <div class="field"><label for="angle"><span data-i="初始角度"></span><span id="angle-value"></span></label><div class="range"><input id="angle" type="range" min="5" max="60" step="0.0001" value="15" data-unit="°"></div></div>
+          <div class="field"><label for="gravity"><span data-i="重力加速度"></span><span id="gravity-value"></span></label><div class="range"><input id="gravity" type="range" min="1.6" max="20" step="0.0001" value="9.81" data-unit="m/s²"></div></div>
+          <div class="row planets"><button class="button" id="earth" type="button" data-i="地球"></button><button class="button" id="moon" type="button" data-i="月球"></button></div>
+          <div class="controls-actions">
+            <button class="button primary" id="play" type="button"></button>
+            <button class="button" id="reset" type="button" data-i="重置本次实验"></button>
+            <button class="button" id="step" type="button" data-i="单步前进 0.02 s"></button>
+          </div>
+          <div class="speed"><label class="small" for="speed" data-i="播放速度（不改变物理周期）"></label><select id="speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></div>
+          <button class="button" id="defaults" type="button" data-i="恢复默认参数"></button>
+          <div class="notes">
+            <h2 data-i="模型札记"></h2>
+            <p class="small" data-i="无阻力 · 定长绳 · 质点模型"></p>
+            <p class="small" data-i="记录后，前往卷册写下你的发现。"></p>
+          </div>
+        </aside>
+        <div class="observations">
+          <canvas id="stage" role="img" data-label="单摆运动示意图"></canvas>
+          <p id="metrics" class="metrics"></p>
+          <canvas id="chart" role="img" data-label="摆角随时间变化曲线"></canvas>
+          <h2 id="records-title" class="manuscript" data-i="实验手稿"></h2>
+          <div class="table-wrap" tabindex="0" aria-labelledby="records-title">
+            <table><thead><tr id="record-head"></tr></thead><tbody id="record-body"></tbody></table>
+          </div>
+          <div class="row record-actions"><button class="button primary" id="record" type="button" data-i="记录本次实验"></button><button class="button" id="csv" type="button" data-i="导出 CSV"></button><button class="button" id="clear" type="button" data-i="清空记录"></button></div>
+        </div>
+      </section>
+      <section id="folios" class="panel" hidden>
+        <aside class="folio-rail" aria-labelledby="folios-title">
+          <h2 id="folios-title" data-i="递进探究任务"></h2>
+          <p class="small" data-i="选择一卷，开始探究。"></p>
+          <div id="folio-list" class="folio-list"></div>
+        </aside>
+        <article class="detail" aria-labelledby="folio-title">
+          <p class="small" data-i="当前卷页"></p>
+          <h2 id="folio-title"></h2>
+          <p id="instruction" hidden></p>
+          <h3 data-i="先预测，再动手"></h3>
+          <label class="small" for="prediction" data-i="我的预测（任务2必须先填写；首次开始实验后锁定，避免事后修改）"></label>
+          <input class="entry" type="text" id="prediction" disabled>
+          <div id="presets"></div>
+          <p id="folio-feedback" class="small"></p>
+          <label class="entry-label" for="conclusion" data-i="我的结论（引用数据，解释规律或模型局限）"></label>
+          <input class="entry" type="text" id="conclusion" disabled>
+          <div class="folio-actions">
+            <button class="button primary" id="complete" type="button" data-i="检查并完成当前任务"></button>
+            <button class="button" id="report" type="button" data-i="导出任务报告"></button>
+            <button class="button" id="free" type="button" data-i="自由实验模式"></button>
+            <button class="button" id="import-report" type="button" data-i="导入 JSON 备份"></button>
+          </div>
+          <p id="persistence" class="small persistence"></p>
+        </article>
+      </section>
+    </main>
+    <footer role="status" data-status></footer>
+  </div>
+  <input id="import-file" type="file" accept=".json,application/json" hidden>
+  <dialog id="import-confirm" aria-labelledby="import-title" aria-describedby="import-text">
+    <h3 id="import-title" data-i="导入 JSON 备份"></h3>
+    <p id="import-text" data-i="导入会替换当前实验记录和卷册进度。需要保留当前进度时，请先取消并导出任务报告。"></p>
+    <form method="dialog">
+      <button class="button" type="submit" value="cancel" data-i="取消" autofocus></button>
+      <button class="button primary" id="replace-progress" type="submit" value="replace" data-i="替换进度"></button>
+    </form>
+  </dialog>
+  <dialog id="notice" aria-labelledby="notice-title" aria-describedby="notice-text">
+    <h3 id="notice-title"></h3>
+    <p id="notice-text"></p>
+    <form method="dialog"><button class="button primary" type="submit" data-i="确定" autofocus></button></form>
+  </dialog>
+
+'''
+
+
+# Provide the shared Simplified Chinese, Traditional Chinese and English labels.
+TRANSLATIONS = r'''  <script id="translations" type="application/json">{
+  "en": {
+    "单摆实验室": "Pendulum Lab",
+    "单摆实验室 · Python Physics Lab": "Pendulum Lab · Python Physics Lab",
+    "预测 → 调参 → 观察 → 解释": "Predict → Adjust → Observe → Explain",
+    "单摆实验": "Simulation",
+    "递进任务清单": "Inquiry checklist",
+    "实验参数": "Parameters",
+    "摆长": "Length",
+    "初始角度": "Initial angle",
+    "重力加速度": "Gravity",
+    "地球": "Earth",
+    "月球": "Moon",
+    "▶ 开始": "▶ Start",
+    "Ⅱ 暂停": "Ⅱ Pause",
+    "▶ 开始 / 继续": "▶ Start / Resume",
+    "重置本次实验": "Reset simulation",
+    "单步前进 0.02 s": "Step forward 0.02 s",
+    "播放速度（不改变物理周期）": "Playback speed (period unchanged)",
+    "恢复默认参数": "Restore defaults",
+    "记录本次实验": "Record experiment",
+    "导出 CSV": "Export CSV",
+    "清空记录": "Clear records",
+    "序号": "No.",
+    "摆长 / m": "Length / m",
+    "初始角 / °": "Initial angle / °",
+    "模拟周期 / s": "Simulated T / s",
+    "小角度公式 / s": "Small-angle T / s",
+    "偏差 / %": "Deviation / %",
+    "递进探究任务": "Progressive inquiry tasks",
+    "选择任务 → 填写预测 → 加载参数并运行 → 记录本次实验 → 写结论并完成任务": "Select task → Predict → Load and run → Record → Conclude and complete",
+    "任务": "Task",
+    "数据进度": "Data progress",
+    "完成状态": "Status",
+    "我的预测（任务2必须先填写；首次开始实验后锁定，避免事后修改）": "My prediction (required for task 2; locked on first run)",
+    "我的结论（引用数据，解释规律或模型局限）": "My conclusion (use evidence to explain patterns or limitations)",
+    "检查并完成当前任务": "Check and complete task",
+    "导出任务报告": "Export task report",
+    "自由实验模式": "Free exploration",
+    "1. 找规律": "1. Find patterns",
+    "2. 检验猜想": "2. Test a prediction",
+    "3. 评价模型": "3. Evaluate the model",
+    "4. 地球与月球": "4. Earth and Moon",
+    "固定初始角度10°、地球重力，测试5种摆长。记录周期后，解释摆长与周期的关系。": "Keep the angle at 10° and Earth gravity. Test five lengths, record periods and explain the relationship.",
+    "先写下预测：摆长从0.25 m增至1 m（4倍），周期会变为几倍？再运行两组实验，用数据检验。": "Predict the period ratio when length increases from 0.25 m to 1 m (4 times). Then run both experiments to test your prediction.",
+    "固定1 m、地球重力，逐渐增大角度。此任务以偏差超过2%作为“明显偏离”的课堂标准，并非通用物理边界。": "Keep length at 1 m and Earth gravity. Increase the angle. This task uses deviation above 2% as a classroom criterion, not a universal physical boundary.",
+    "保持1 m、初始角度10°不变，比较地球与月球的周期，并解释重力的影响。": "Keep length at 1 m and angle at 10°. Compare Earth and Moon periods and explain the effect of gravity.",
+    "先预测，再实验": "Predict before experimenting",
+    "请先在任务2填写周期将变为几倍及你的理由，再运行或单步。": "Enter your predicted period ratio and reasoning in task 2 before running or stepping.",
+    " 组": " sets",
+    "✓ 已完成": "✓ Complete",
+    "待完成": "Pending",
+    "当前为自由实验模式。选择上方任务开始探究。": "Free exploration. Select a task above to begin.",
+    "：待记录": ": not recorded",
+    " s，偏差=": " s, deviation=",
+    "第二组 / 第一组的周期比 = ": "Period ratio (second / first) = ",
+    "。请与你的预测或解释比较。": ". Compare with your prediction or explanation.",
+    "已测角度中首次超过2%偏差：": "First tested angle exceeding 2% deviation: ",
+    "°。可进一步细测临界范围。": "°. Test intermediate angles to narrow the range.",
+    "已测角度均未超过2%。": "None of the tested angles exceed 2% deviation.",
+    "任务尚未完成": "Task incomplete",
+    "请记录该任务的全部参数组，并填写自己的结论。": "Record every required parameter set and enter your conclusion.",
+    "任务已完成！结论由学生填写，教师可结合数据评价。": "Task complete. The teacher can evaluate your conclusion against the evidence.",
+    "自由实验模式：记录不计入任务进度。": "Free exploration: records do not count towards tasks.",
+    "单摆探究任务报告.json": "pendulum_inquiry_report.json",
+    "任务报告 JSON": "Task report JSON",
+    "说明": "Instructions",
+    "预测": "Prediction",
+    "结论": "Conclusion",
+    "已完成": "Complete",
+    "实验数据": "Experiment data",
+    "列名": "Columns",
+    "摆长(m)": "Length(m)",
+    "初始角(°)": "Initial angle(deg)",
+    "初始角度(°)": "Initial angle(deg)",
+    "重力加速度(m/s²)": "Gravity(m/s²)",
+    "模拟周期(s)": "Simulated period(s)",
+    "小角度周期(s)": "Small-angle period(s)",
+    "小角度公式周期(s)": "Small-angle period(s)",
+    "偏差(%)": "Deviation(%)",
+    "已导出任务报告（含预测、结论、数据和完成状态）。": "Task report exported with predictions, conclusions, data and completion status.",
+    "导出失败": "Export failed",
+    "参数已更新，本次实验重新开始。周期由模拟中相邻两次同向过零测得。": "Parameters updated; simulation reset. Period is measured between consecutive same-direction zero crossings.",
+    "已回到当前参数的释放位置。": "Reset to the release position for the current parameters.",
+    "非线性单摆 · 固定空间比例": "Nonlinear pendulum · fixed spatial scale",
+    "等待测量": "Awaiting measurement",
+    "时间 ": "Time ",
+    " s    当前角度 ": " s    Angle ",
+    "°    完整周期数 ": "°    Full cycles ",
+    "模拟周期：": "Simulated period: ",
+    "     小角度公式：": "     Small-angle formula: ",
+    "摆角 θ（°）— 模拟时间 t（s）｜最近15秒": "Angle θ (°) — simulation time t (s) | last 15 seconds",
+    "还没有测得周期": "Period not yet measured",
+    "请先运行至完成两次从右向左的平衡位置穿越，再记录。": "Run until the pendulum crosses equilibrium twice from right to left, then record.",
+    "实验已记录。偏差 =（模拟周期 − 小角度公式周期）/ 小角度公式周期 × 100%。": "Recorded. Deviation = (simulated period - small-angle period) / small-angle period × 100%.",
+    "已更新当前任务的数据进度。前往“递进任务清单”查看结果并写结论。": "Task progress updated. Open the inquiry checklist to review results and write a conclusion.",
+    "已存入实验表，但不计入任务进度：请使用任务参数预设，并先完成预测。": "Saved to the table but not task progress. Use task presets and predict first.",
+    "暂无记录": "No records",
+    "先点击“记录本次实验”保存至少一组数据。": "Click Record experiment to save at least one data set.",
+    "单摆实验记录.csv": "pendulum_records.csv",
+    "CSV 文件": "CSV file",
+    "已导出 ": "Exported ",
+    " 组实验数据。": " experiment data sets.",
+    "实验记录已清空。": "Experiment records cleared.",
+    "当前任务：": "Current task: ",
+    "。请加载一组参数后开始实验。": ". Load a parameter set to begin.",
+    "先预测，再拖动滑块。点击“开始”释放单摆。": "Predict, then adjust the sliders. Click Start to release the pendulum.",
+    "语言已切换，实验与任务数据已保留。": "Language changed. Simulation and task data preserved.",
+    "\n模拟周期：": "\nSimulated period: ",
+    "模型假设\n无空气阻力；绳不可伸长；\n摆球视为质点。\n\n滑块改变后重新释放，\n已有实验记录保留。\n\n提示：先保持角度不变，\n只改变摆长。": "Assumptions\nNo air resistance; fixed string;\npoint-mass bob.\n\nParameter changes restart\nthe simulation; records remain.\n\nTip: hold angle fixed\nand change only length.",
+    "任务进度只接受在该任务下新记录的数据；自由实验数据不计入。\n任务报告可导出保存；关闭程序后不会自动恢复进度。": "Only new records made within the selected task count. Free-exploration data are excluded.\nExport a report before closing; progress is not restored automatically."
+  },
+  "zh-TW": {
+    "3. 评价模型": "3. 評價模型",
+    "°    完整周期数 ": "°    完整周期數 ",
+    "     小角度公式：": "     小角度公式：",
+    "单摆探究任务报告.json": "單擺探究任務報告.json",
+    "单摆实验室": "單擺實驗室",
+    "模型假设\n无空气阻力；绳不可伸长；\n摆球视为质点。\n\n滑块改变后重新释放，\n已有实验记录保留。\n\n提示：先保持角度不变，\n只改变摆长。": "模型假設\n無空氣阻力；繩不可伸長；\n擺球視為質點。\n\n滑塊改變后重新釋放，\n已有實驗記錄保留。\n\n提示：先保持角度不變，\n只改變擺長。",
+    "初始角(°)": "初始角(°)",
+    "时间 ": "時間 ",
+    "任务": "任務",
+    " 组": " 組",
+    "已存入实验表，但不计入任务进度：请使用任务参数预设，并先完成预测。": "已存入實驗表，但不計入任務進度：請使用任務參數預設，并先完成預測。",
+    "摆长(m)": "擺長(m)",
+    "参数已更新，本次实验重新开始。周期由模拟中相邻两次同向过零测得。": "參數已更新，本次實驗重新開始。周期由模擬中相鄰兩次同向過零測得。",
+    "保持1 m、初始角度10°不变，比较地球与月球的周期，并解释重力的影响。": "保持1 m、初始角度10°不變，比較地球與月球的周期，并解釋重力的影響。",
+    "重置本次实验": "重置本次實驗",
+    "请先在任务2填写周期将变为几倍及你的理由，再运行或单步。": "請先在任務2填寫周期將變為幾倍及你的理由，再運行或單步。",
+    "交互式单摆实验室：仅使用 Python 标准库。": "交互式單擺實驗室：僅使用 Python 標準庫。",
+    "月球": "月球",
+    "初始角度(°)": "初始角度(°)",
+    "✓ 已完成": "✓ 已完成",
+    "摆长 / m": "擺長 / m",
+    "先写下预测：摆长从0.25 m增至1 m（4倍），周期会变为几倍？再运行两组实验，用数据检验。": "先寫下預測：擺長從0.25 m增至1 m（4倍），周期會變為幾倍？再運行兩組實驗，用數據檢驗。",
+    "导出任务报告": "導出任務報告",
+    "重力加速度(m/s²)": "重力加速度(m/s²)",
+    "说明": "說明",
+    "固定初始角度10°、地球重力，测试5种摆长。记录周期后，解释摆长与周期的关系。": "固定初始角度10°、地球重力，測試5種擺長。記錄周期后，解釋擺長與周期的關系。",
+    "当前任务：": "當前任務：",
+    "小角度周期(s)": "小角度周期(s)",
+    "模拟周期(s)": "模擬周期(s)",
+    "初始角 / °": "初始角 / °",
+    "重力加速度": "重力加速度",
+    "已更新当前任务的数据进度。前往“递进任务清单”查看结果并写结论。": "已更新當前任務的數據進度。前往“遞進任務清單”查看結果并寫結論。",
+    "单摆实验记录.csv": "單擺實驗記錄.csv",
+    "4. 地球与月球": "4. 地球與月球",
+    "请先运行至完成两次从右向左的平衡位置穿越，再记录。": "請先運行至完成兩次從右向左的平衡位置穿越，再記錄。",
+    "小角度公式 / s": "小角度公式 / s",
+    "单摆实验室 · Python Physics Lab": "單擺實驗室 · Python Physics Lab",
+    "偏差 / %": "偏差 / %",
+    "地球": "地球",
+    "任务报告 JSON": "任務報告 JSON",
+    "预测": "預測",
+    " s    当前角度 ": " s    當前角度 ",
+    "1. 找规律": "1. 找規律",
+    "已测角度均未超过2%。": "已測角度均未超過2%。",
+    "实验记录已清空。": "實驗記錄已清空。",
+    "°。可进一步细测临界范围。": "°。可進一步細測臨界范圍。",
+    "完成状态": "完成狀態",
+    "我的结论（引用数据，解释规律或模型局限）": "我的結論（引用數據，解釋規律或模型局限）",
+    "序号": "序號",
+    "导出 CSV": "導出 CSV",
+    "语言已切换，实验与任务数据已保留。": "語言已切換，實驗與任務數據已保留。",
+    "2. 检验猜想": "2. 檢驗猜想",
+    "请记录该任务的全部参数组，并填写自己的结论。": "請記錄該任務的全部參數組，并填寫自己的結論。",
+    "摆角 θ（°）— 模拟时间 t（s）｜最近15秒": "擺角 θ（°）— 模擬時間 t（s）｜最近15秒",
+    "。请加载一组参数后开始实验。": "。請加載一組參數后開始實驗。",
+    "清空记录": "清空記錄",
+    "选择任务 → 填写预测 → 加载参数并运行 → 记录本次实验 → 写结论并完成任务": "選擇任務 → 填寫預測 → 加載參數并運行 → 記錄本次實驗 → 寫結論并完成任務",
+    "暂无记录": "暫無記錄",
+    "当前为自由实验模式。选择上方任务开始探究。": "當前為自由實驗模式。選擇上方任務開始探究。",
+    "Ⅱ 暂停": "Ⅱ 暫停",
+    "自由实验模式": "自由實驗模式",
+    "固定1 m、地球重力，逐渐增大角度。此任务以偏差超过2%作为“明显偏离”的课堂标准，并非通用物理边界。": "固定1 m、地球重力，逐漸增大角度。此任務以偏差超過2%作為“明顯偏離”的課堂標準，并非通用物理邊界。",
+    "模拟周期：": "模擬周期：",
+    " 组实验数据。": " 組實驗數據。",
+    "\n模拟周期：": "\n模擬周期：",
+    "我的预测（任务2必须先填写；首次开始实验后锁定，避免事后修改）": "我的預測（任務2必須先填寫；首次開始實驗后鎖定，避免事后修改）",
+    "待完成": "待完成",
+    "：待记录": "：待記錄",
+    "已完成": "已完成",
+    "CSV 文件": "CSV 文件",
+    "任务已完成！结论由学生填写，教师可结合数据评价。": "任務已完成！結論由學生填寫，教師可結合數據評價。",
+    "已回到当前参数的释放位置。": "已回到當前參數的釋放位置。",
+    "先预测，再实验": "先預測，再實驗",
+    "摆长": "擺長",
+    "恢复默认参数": "恢復默認參數",
+    "单摆实验": "單擺實驗",
+    "等待测量": "等待測量",
+    "。请与你的预测或解释比较。": "。請與你的預測或解釋比較。",
+    "自由实验模式：记录不计入任务进度。": "自由實驗模式：記錄不計入任務進度。",
+    "递进任务清单": "遞進任務清單",
+    "播放速度（不改变物理周期）": "播放速度（不改變物理周期）",
+    "已测角度中首次超过2%偏差：": "已測角度中首次超過2%偏差：",
+    "预测 → 调参 → 观察 → 解释": "預測 → 調參 → 觀察 → 解釋",
+    "先预测，再拖动滑块。点击“开始”释放单摆。": "先預測，再拖動滑塊。點擊“開始”釋放單擺。",
+    "单步前进 0.02 s": "單步前進 0.02 s",
+    "小角度公式周期(s)": "小角度公式周期(s)",
+    "导出失败": "導出失敗",
+    "已导出任务报告（含预测、结论、数据和完成状态）。": "已導出任務報告（含預測、結論、數據和完成狀態）。",
+    "已导出 ": "已導出 ",
+    "记录本次实验": "記錄本次實驗",
+    "偏差(%)": "偏差(%)",
+    "▶ 开始": "▶ 開始",
+    "还没有测得周期": "還沒有測得周期",
+    "第二组 / 第一组的周期比 = ": "第二組 / 第一組的周期比 = ",
+    "实验参数": "實驗參數",
+    "结论": "結論",
+    "递进探究任务": "遞進探究任務",
+    "非线性单摆 · 固定空间比例": "非線性單擺 · 固定空間比例",
+    "检查并完成当前任务": "檢查并完成當前任務",
+    "初始角度": "初始角度",
+    "▶ 开始 / 继续": "▶ 開始 / 繼續",
+    "先点击“记录本次实验”保存至少一组数据。": "先點擊“記錄本次實驗”保存至少一組數據。",
+    "数据进度": "數據進度",
+    " s，偏差=": " s，偏差=",
+    "模拟周期 / s": "模擬周期 / s",
+    "实验已记录。偏差 =（模拟周期 − 小角度公式周期）/ 小角度公式周期 × 100%。": "實驗已記錄。偏差 =（模擬周期 − 小角度公式周期）/ 小角度公式周期 × 100%。",
+    "任务尚未完成": "任務尚未完成",
+    "实验数据": "實驗數據",
+    "任务进度只接受在该任务下新记录的数据；自由实验数据不计入。\n任务报告可导出保存；关闭程序后不会自动恢复进度。": "任務進度只接受在該任務下新記錄的數據；自由實驗數據不計入。\n任務報告可導出保存；關閉程序后不會自動恢復進度。",
+    "列名": "列名"
+  }
+}</script>'''.replace('\n', '\r\n') + '\n'
+
+
+# Set up the experiment parameters, inquiry tasks and initial browser state.
+EXPERIMENT_SETUP = r'''  <script>
+    'use strict';
+
+    const catalog = JSON.parse(document.getElementById('translations').textContent);
+    const words = {
+      '物理单摆实验': ['物理單擺實驗', 'Pendulum Physics Experiment'],
+      '简中': ['简中', 'Simplified Chinese'],
+      '繁中': ['繁中', 'Traditional Chinese'],
+      "单摆实验室": [
+        "學者工坊",
+        "Scholar's Workshop"
+      ],
+      "单摆实验室 · Python Physics Lab": [
+        "學者工坊 · Python",
+        "Scholar's Workshop · Python"
+      ],
+      "单摆实验": [
+        "實驗工坊",
+        "The workshop"
+      ],
+      "递进任务清单": [
+        "探究卷冊",
+        "Inquiry folios"
+      ],
+      "实验参数": [
+        "實驗設定",
+        "Experiment settings"
+      ],
+      "递进探究任务": [
+        "探究卷冊",
+        "Inquiry folios"
+      ],
+      "卷一 · 寻找规律": [
+        "卷一 · 尋找規律",
+        "I · Find patterns"
+      ],
+      "卷二 · 检验猜想": [
+        "卷二 · 檢驗猜想",
+        "II · Test a prediction"
+      ],
+      "卷三 · 审视模型": [
+        "卷三 · 審視模型",
+        "III · Evaluate the model"
+      ],
+      "卷四 · 两地之摆": [
+        "卷四 · 兩地之擺",
+        "IV · Earth and Moon"
+      ],
+      "自然哲学 · 交互实验手稿": [
+        "自然哲學 · 互動實驗手稿",
+        "NATURAL PHILOSOPHY · AN INTERACTIVE NOTEBOOK"
+      ],
+      "运动观察": [
+        "運動觀察",
+        "Motion study"
+      ],
+      "实验手稿": [
+        "實驗手稿",
+        "Experiment notebook"
+      ],
+      "观测曲线": [
+        "觀測曲線",
+        "Observation trace"
+      ],
+      "模型札记": [
+        "模型札記",
+        "Model notes"
+      ],
+      "无阻力 · 定长绳 · 质点模型": [
+        "無阻力 · 定長繩 · 質點模型",
+        "No drag · fixed string · point mass"
+      ],
+      "记录后，前往卷册写下你的发现。": [
+        "記錄後，前往卷冊寫下你的發現。",
+        "Record an experiment, then write your findings in the folios."
+      ],
+      "选择一卷，开始探究。": [
+        "選擇一卷，開始探究。",
+        "Choose a folio to begin."
+      ],
+      "完成": [
+        "完成",
+        "DONE"
+      ],
+      "当前卷页": [
+        "當前卷頁",
+        "Selected folio"
+      ],
+      "待记录": [
+        "待記錄",
+        "Not recorded"
+      ],
+      "数据齐全 · 请写结论": [
+        "資料齊全 · 請寫結論",
+        "Data ready · write a conclusion"
+      ],
+      "先预测，再动手": [
+        "先預測，再動手",
+        "Predict before you experiment"
+      ],
+      "界面语言": [
+        "介面語言",
+        "Interface language"
+      ],
+      "工坊导航": [
+        "工坊導覽",
+        "Workshop navigation"
+      ],
+      "单摆运动示意图": [
+        "單擺運動示意圖",
+        "Animated pendulum diagram"
+      ],
+      "摆角随时间变化曲线": [
+        "擺角隨時間變化曲線",
+        "Plot of angle over simulation time"
+      ],
+      "确定": [
+        "確定",
+        "OK"
+      ],
+      '导入 JSON 备份': ['匯入 JSON 備份', 'Import JSON backup'],
+      '导入会替换当前实验记录和卷册进度。需要保留当前进度时，请先取消并导出任务报告。': ['匯入會取代目前的實驗紀錄和卷冊進度。如需保留目前進度，請先取消並匯出任務報告。', 'Importing replaces the current experiment records and folio progress. To keep your current progress, cancel and export a task report first.'],
+      '取消': ['取消', 'Cancel'],
+      '替换进度': ['取代進度', 'Replace progress'],
+      '已恢复上次的实验进度。': ['已恢復上次的實驗進度。', 'Your previous experiment progress has been restored.'],
+      '已导入 JSON 备份。': ['已匯入 JSON 備份。', 'JSON backup imported.'],
+      '已导入旧版报告中的卷册进度。': ['已匯入舊版報告中的卷冊進度。', 'Folio progress imported from the older report.'],
+      '导入失败': ['匯入失敗', 'Import failed'],
+      '请选择本实验导出的 JSON 备份或任务报告。': ['請選擇本實驗匯出的 JSON 備份或任務報告。', 'Choose a JSON backup or task report exported by this experiment.'],
+      '无法读取上次保存的实验进度，可导入 JSON 备份继续。': ['無法讀取上次儲存的實驗進度，可匯入 JSON 備份繼續。', 'Saved progress could not be read. Import a JSON backup to continue.'],
+      '任务进度只接受在该任务下新记录的数据；自由实验数据不计入。': ['任務進度只採計在該任務下新記錄的資料；自由實驗資料不計入。', 'Only new records made within the selected task count.'],
+      '实验记录和卷册进度会自动保存在此浏览器。任务报告也可作为 JSON 备份。': ['實驗紀錄和卷冊進度會自動儲存在此瀏覽器。任務報告也可作為 JSON 備份。', 'Experiment records and folio progress are saved in this browser. The task report also serves as a JSON backup.'],
+      '此浏览器无法自动保存，请导出任务报告保存进度。': ['此瀏覽器無法自動儲存，請匯出任務報告保留進度。', 'Autosave is unavailable in this browser. Export a task report to keep your progress.']
+    };
+    const tasks = [
+      { name: '卷一 · 寻找规律', cases: [.25, .5, 1, 1.5, 2].map(length => [length, 10, 9.81]), instruction: '固定初始角度10°、地球重力，测试5种摆长。记录周期后，解释摆长与周期的关系。' },
+      { name: '卷二 · 检验猜想', cases: [[.25, 10, 9.81], [1, 10, 9.81]], instruction: '先写下预测：摆长从0.25 m增至1 m（4倍），周期会变为几倍？再运行两组实验，用数据检验。' },
+      { name: '卷三 · 审视模型', cases: [5, 15, 30, 60].map(angle => [1, angle, 9.81]), instruction: '固定1 m、地球重力，逐渐增大角度。此任务以偏差超过2%作为“明显偏离”的课堂标准，并非通用物理边界。' },
+      { name: '卷四 · 两地之摆', cases: [[1, 10, 9.81], [1, 10, 1.62]], instruction: '保持1 m、初始角度10°不变，比较地球与月球的周期，并解释重力的影响。' },
+    ];
+    const headings = ['序号', '摆长 / m', '初始角 / °', 'g / m/s²', '模拟周期 / s', '小角度公式 / s', '偏差 / %'];
+    const dt = 1 / 240;
+    const radians = Math.PI / 180;
+    const defaults = [1, 15, 9.81];
+    const storageKey = 'pendulum-workshop-progress-v1';
+    const backupVersion = 1;
+    const speeds = ['0.25', '0.5', '1', '2'];
+    const $ = id => document.getElementById(id);
+    const inputs = ['length', 'angle', 'gravity'].map($);
+    const folios = tasks.map(() => ({ evidence: new Map(), prediction: '', conclusion: '', done: false }));
+    const records = [];
+    const model = {};
+    let language = 'zh-CN';
+    let activeTask = null;
+    let lastTask = null;
+    let predictionLocked = false;
+    let running = false;
+    let initialPlay = true;
+    let pointerDrag = null;
+    let lastFrame = null;
+    let accumulator = 0;
+    let history = [];
+    let view = 'lab';
+    let status = { message: '先预测，再拖动滑块。点击“开始”释放单摆。', args: [] };
+    let saveTimer = null;
+    let autosaveReady = false;
+    let storageAvailable = true;
+    let pendingImport = null;
+
+'''
+
+
+# Render localized text and connect the controls to the experiment state.
+INTERFACE_CONTROLS = r'''    function tr(key, locale = language) {
+      if (locale === 'zh-CN') return ({ '单摆实验': '实验工坊', '递进任务清单': '探究卷册', '递进探究任务': '探究卷册', '实验参数': '实验设定' })[key] ?? key;
+      return words[key]?.[locale === 'en' ? 1 : 0] ?? catalog[locale]?.[key] ?? key;
+    }
+
+    function make(tag, text, className) {
+      const element = document.createElement(tag);
+      if (text !== undefined) element.textContent = text;
+      if (className) element.className = className;
+      return element;
+    }
+
+    function setStatus(message, args = []) {
+      status = { message, args };
+      renderStatus();
+    }
+
+    function renderStatus() {
+      const message = status.message === 'task'
+        ? `${tr('当前任务：')}${tr(tasks[status.args[0]].name)}${tr('。请加载一组参数后开始实验。')}`
+        : status.message === 'csv'
+          ? `${tr('已导出 ')}${status.args[0]}${tr(' 组实验数据。')}`
+          : tr(status.message);
+      document.querySelector('[data-status]').textContent = message;
+    }
+
+    function showNotice(title, message, nextFocus) {
+      const dialog = $('notice');
+      $('notice-title').textContent = tr(title);
+      $('notice-text').textContent = tr(message);
+      if (nextFocus) dialog.addEventListener('close', () => nextFocus.focus(), { once: true });
+      dialog.showModal();
+    }
+
+    function setView(next, scroll = true) {
+      view = next;
+      $('lab').hidden = next !== 'lab';
+      $('folios').hidden = next !== 'folios';
+      document.querySelectorAll('[data-view]').forEach(button => {
+        if (button.dataset.view === next) button.setAttribute('aria-current', 'page');
+        else button.removeAttribute('aria-current');
+      });
+      if (next === 'lab') renderSimulation();
+      if (scroll) window.scrollTo(0, 0);
+      scheduleSave();
+    }
+
+    function setRunning(value) {
+      running = value;
+      initialPlay = false;
+      lastFrame = null;
+      renderControls();
+      scheduleSave();
+    }
+
+    function updateParameters() {
+      [model.length, model.angle, model.gravity] = inputs.map(input => Number(input.value));
+      model.theory = 2 * Math.PI * Math.sqrt(model.length / model.gravity);
+      for (const input of inputs) {
+        const value = `${Number(input.value).toFixed(2)} ${input.dataset.unit}`;
+        $(`${input.id}-value`).textContent = value;
+        input.setAttribute('aria-valuetext', value);
+        const fraction = (Number(input.value) - Number(input.min)) / (Number(input.max) - Number(input.min));
+        input.parentElement.style.setProperty('--fraction', `${100 * fraction}%`);
+      }
+      resetMotion();
+      setStatus('参数已更新，本次实验重新开始。周期由模拟中相邻两次同向过零测得。');
+    }
+
+    function resetMotion() {
+      model.theta = model.angle * radians;
+      model.omega = 0;
+      model.t = 0;
+      model.crossing = null;
+      model.period = null;
+      model.cycles = 0;
+      history = [[0, model.angle]];
+      accumulator = 0;
+      lastFrame = null;
+      renderSimulation();
+      scheduleSave();
+    }
+
+    function loadSettings(values) {
+      setRunning(false);
+      inputs.forEach((input, index) => { input.value = values[index]; });
+      updateParameters();
+    }
+
+    function allowExperiment() {
+      if (activeTask !== 1) return true;
+      if (!folios[1].prediction.trim()) {
+        setView('folios');
+        showNotice('先预测，再实验', '请先在任务2填写周期将变为几倍及你的理由，再运行或单步。', $('prediction'));
+        return false;
+      }
+      predictionLocked = true;
+      $('prediction').readOnly = true;
+      scheduleSave();
+      return true;
+    }
+
+'''
+
+
+# Integrate the nonlinear pendulum equation and measure its period.
+PENDULUM_SIMULATION = r'''    function stepPhysics() {
+      // θ′ = ω and ω′ = −(g/L)sin θ, integrated with fixed-step RK4.
+      const { theta, omega, gravity, length } = model;
+      const acceleration = angle => -gravity / length * Math.sin(angle);
+      const a = omega;
+      const b = acceleration(theta);
+      const c = omega + dt * b / 2;
+      const d = acceleration(theta + dt * a / 2);
+      const e = omega + dt * d / 2;
+      const f = acceleration(theta + dt * c / 2);
+      const h = omega + dt * f;
+      const j = acceleration(theta + dt * e);
+      model.theta += dt * (a + 2 * c + 2 * e + h) / 6;
+      model.omega += dt * (b + 2 * d + 2 * f + j) / 6;
+      if (theta > 0 && model.theta <= 0) {
+        const crossing = model.t + dt * theta / (theta - model.theta);
+        if (model.crossing !== null) {
+          model.period = crossing - model.crossing;
+          model.cycles += 1;
+        }
+        model.crossing = crossing;
+      }
+      model.t += dt;
+    }
+
+    function advance(duration) {
+      accumulator += duration;
+      while (accumulator >= dt) {
+        stepPhysics();
+        accumulator -= dt;
+      }
+      if (history.at(-1)[0] !== model.t) history.push([model.t, model.theta / radians]);
+      while (history[0][0] < model.t - 15) history.shift();
+      scheduleSave();
+    }
+
+    function frame(now) {
+      if (running && !$('import-confirm').open) {
+        if (lastFrame !== null) advance(Math.min((now - lastFrame) / 1000, .1) * Number($('speed').value));
+        lastFrame = now;
+        if (view === 'lab') renderSimulation();
+      } else {
+        lastFrame = null;
+      }
+      requestAnimationFrame(frame);
+    }
+
+    function renderControls() {
+      $('play').textContent = tr(running ? 'Ⅱ 暂停' : initialPlay ? '▶ 开始' : '▶ 开始 / 继续');
+    }
+
+    function renderSimulation() {
+      const angle = `${model.theta >= 0 ? '+' : ''}${(model.theta / radians).toFixed(1)}`;
+      const period = model.period === null ? tr('等待测量') : `${model.period.toFixed(3)} s`;
+      $('metrics').textContent = `${tr('时间 ')}${model.t.toFixed(2)}${tr(' s    当前角度 ')}${angle}${tr('°    完整周期数 ')}${model.cycles}\n${tr('模拟周期：')}${period}${tr('     小角度公式：')}${model.theory.toFixed(3)} s`;
+      renderControls();
+      drawStage();
+      drawChart();
+    }
+
+'''
+
+
+# Record measurements and update the progress of each inquiry folio.
+EXPERIMENT_RECORDS = r'''    function renderRecords() {
+      $('record-head').replaceChildren(...headings.map(label => {
+        const cell = make('th', tr(label));
+        cell.scope = 'col';
+        return cell;
+      }));
+      const rows = records.map(values => {
+        const row = make('tr');
+        row.append(...values.map(value => make('td', value)));
+        return row;
+      });
+      while (rows.length < 3) {
+        const blank = make('tr', undefined, 'empty-row');
+        blank.setAttribute('aria-hidden', 'true');
+        blank.append(...headings.map(() => make('td')));
+        rows.push(blank);
+      }
+      $('record-body').replaceChildren(...rows);
+    }
+
+    function recordExperiment() {
+      if (model.period === null) {
+        showNotice('还没有测得周期', '请先运行至完成两次从右向左的平衡位置穿越，再记录。');
+        return;
+      }
+      const params = [model.length, model.angle, model.gravity];
+      const row = [records.length + 1, ...params.map(value => value.toFixed(4)), model.period.toFixed(5), model.theory.toFixed(5), (100 * (model.period / model.theory - 1)).toFixed(3)];
+      records.push(row);
+      scheduleSave();
+      renderRecords();
+      const table = $('record-body').closest('.table-wrap');
+      table.scrollTop = table.scrollHeight;
+      if (activeTask === null) {
+        setStatus('实验已记录。偏差 =（模拟周期 − 小角度公式周期）/ 小角度公式周期 × 100%。');
+        return;
+      }
+      const index = tasks[activeTask].cases.findIndex(group => group.every((value, i) => Math.abs(value - params[i]) < .0001));
+      if (index === -1 || (activeTask === 1 && !predictionLocked)) {
+        setStatus('已存入实验表，但不计入任务进度：请使用任务参数预设，并先完成预测。');
+        return;
+      }
+      folios[activeTask].evidence.set(index, row);
+      folios[activeTask].done = false;
+      renderFolios();
+      setStatus('已更新当前任务的数据进度。前往“递进任务清单”查看结果并写结论。');
+    }
+
+    function renderFolios() {
+      const restoreFocus = document.activeElement?.dataset.folio;
+      $('folio-list').replaceChildren(...tasks.map((task, index) => {
+        const folio = folios[index];
+        const button = make('button', undefined, 'folio-button');
+        button.type = 'button';
+        button.dataset.folio = index;
+        button.setAttribute('aria-pressed', String(activeTask === index));
+        const page = make('span', undefined, 'folio-page');
+        page.append(make('span', undefined, 'folio-face'));
+        const progress = make('span', undefined, 'folio-progress');
+        progress.style.setProperty('--progress', `${100 * folio.evidence.size / task.cases.length}%`);
+        const count = [folio.evidence.size, task.cases.length].map(value => String(value).padStart(2, '0')).join(' / ');
+        const state = folio.done ? '✓ 已完成' : folio.evidence.size === task.cases.length ? '数据齐全 · 请写结论' : '待完成';
+        button.append(make('span', undefined, 'folio-shadow'), page, make('span', undefined, 'folio-fold'),
+          make('span', undefined, 'folio-binding'), make('span', tr(task.name), 'folio-title'),
+          make('span', tr(state), folio.done ? 'folio-state done' : 'folio-state'),
+          make('span', count, 'folio-count'), progress);
+        if (folio.done) {
+          const seal = make('span', tr('完成'), 'folio-seal');
+          seal.setAttribute('aria-hidden', 'true');
+          button.append(seal);
+        }
+        button.addEventListener('click', () => {
+          if (activeTask !== index) {
+            activeTask = index;
+            lastTask = index;
+            setRunning(false);
+            resetMotion();
+            setStatus('task', [index]);
+            renderFolios();
+            document.querySelector('.detail').scrollTop = 0;
+          }
+        });
+        return button;
+      }));
+      if (restoreFocus !== undefined) $('folio-list').querySelector(`[data-folio="${restoreFocus}"]`)?.focus();
+      const task = tasks[activeTask];
+      const shownTask = tasks[lastTask];
+      $('folio-title').textContent = tr(task?.name ?? '选择一卷，开始探究。');
+      $('instruction').hidden = !shownTask;
+      $('instruction').textContent = shownTask ? tr(shownTask.instruction) : '';
+      const folio = folios[lastTask];
+      $('prediction').value = folio?.prediction ?? '';
+      $('prediction').disabled = !task;
+      $('prediction').readOnly = activeTask === 1 && predictionLocked;
+      $('conclusion').value = folio?.conclusion ?? '';
+      $('conclusion').disabled = !task;
+      $('presets').replaceChildren(...(shownTask?.cases ?? []).map(group => {
+        const button = make('button', `${group[0]} m / ${group[1]}° / g=${group[2]}`, 'button');
+        button.type = 'button';
+        button.addEventListener('click', () => {
+          loadSettings(group);
+          setView('lab');
+        });
+        return button;
+      }));
+      if (!task) {
+        $('folio-feedback').textContent = tr('当前为自由实验模式。选择上方任务开始探究。');
+        return;
+      }
+      const evidence = task.cases.map(([length, angle, gravity], index) => {
+        const row = folio.evidence.get(index);
+        const separator = language === 'en' ? ', ' : '，';
+        const measured = language === 'en' ? ': ' : '：';
+        const label = [`L=${length} m`, `θ₀=${angle}°`, `g=${gravity}`].join(separator);
+        return row ? `✓ ${label}${measured}T=${row[4]}${tr(' s，偏差=')}${row[6]}%` : `□ ${label}${tr('：待记录')}`;
+      });
+      const summary = summarizeFolio(task, folio);
+      if (summary) evidence.push(summary);
+      $('folio-feedback').textContent = evidence.join('\n');
+    }
+
+    function summarizeFolio(task, folio) {
+      if (folio.evidence.size !== task.cases.length) return '';
+      if (activeTask === 1 || activeTask === 3) {
+        const ratio = Number(folio.evidence.get(1)[4]) / Number(folio.evidence.get(0)[4]);
+        return `${tr('第二组 / 第一组的周期比 = ')}${ratio.toFixed(3)}${tr('。请与你的预测或解释比较。')}`;
+      }
+      if (activeTask === 2) {
+        const first = task.cases.findIndex((_, index) => Math.abs(Number(folio.evidence.get(index)[6])) > 2);
+        return first === -1 ? tr('已测角度均未超过2%。')
+          : `${tr('已测角度中首次超过2%偏差：')}${task.cases[first][1]}${tr('°。可进一步细测临界范围。')}`;
+      }
+      return '';
+    }
+
+    function completeTask() {
+      if (activeTask === null) return;
+      const folio = folios[activeTask];
+      if (folio.evidence.size !== tasks[activeTask].cases.length || !folio.conclusion.trim()) {
+        showNotice('任务尚未完成', '请记录该任务的全部参数组，并填写自己的结论。');
+        return;
+      }
+      folio.done = true;
+      scheduleSave();
+      renderFolios();
+      setStatus('任务已完成！结论由学生填写，教师可结合数据评价。');
+    }
+
+'''
+
+
+# Export the experiment log as CSV and the inquiry report as JSON.
+DATA_EXPORT = r'''    function download(name, mime, content) {
+      const url = URL.createObjectURL(new Blob([content], { type: mime }));
+      const link = make('a');
+      link.href = url;
+      link.download = name;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    }
+
+    function exportCsv() {
+      if (!records.length) {
+        showNotice('暂无记录', '先点击“记录本次实验”保存至少一组数据。');
+        return;
+      }
+      const columns = ['序号', '摆长(m)', '初始角度(°)', '重力加速度(m/s²)', '模拟周期(s)', '小角度公式周期(s)', '偏差(%)'];
+      const lines = [columns.map(key => tr(key)), ...records].map(row => row.map(value => {
+        const field = String(value);
+        return /[,"\r\n]/.test(field) ? `"${field.replaceAll('"', '""')}"` : field;
+      }).join(','));
+      download(tr('单摆实验记录.csv'), 'text/csv;charset=utf-8', `\uFEFF${lines.join('\r\n')}\r\n`);
+      setStatus('csv', [records.length]);
+    }
+
+    function exportReport() {
+      const report = tasks.map((task, index) => ({
+        [tr('任务')]: tr(task.name), [tr('说明')]: tr(task.instruction), [tr('预测')]: folios[index].prediction,
+        [tr('结论')]: folios[index].conclusion, [tr('已完成')]: folios[index].done,
+        [tr('实验数据')]: [...folios[index].evidence.values()],
+      }));
+      const columns = ['序号', '摆长(m)', '初始角(°)', 'g(m/s²)', '模拟周期(s)', '小角度周期(s)', '偏差(%)'];
+      const content = JSON.stringify({ [tr('列名')]: columns.map(key => tr(key)), [tr('任务')]: report, backup: captureProgress() }, null, 2);
+      download(tr('单摆探究任务报告.json'), 'application/json;charset=utf-8', content);
+      setStatus('已导出任务报告（含预测、结论、数据和完成状态）。');
+    }
+
+'''
+
+
+# Save and restore progress, and validate current and older JSON backups.
+PROGRESS_BACKUP = r'''    function captureProgress() {
+      const { theta, omega, t, crossing, period, cycles } = model;
+      return {
+        version: backupVersion,
+        language, view, activeTask, lastTask, predictionLocked,
+        settings: inputs.map(input => Number(input.value)), speed: $('speed').value,
+        motion: { theta, omega, t, crossing, period, cycles, accumulator, history },
+        records,
+        folios: folios.map(({ prediction, conclusion, done, evidence }) => ({
+          prediction, conclusion, done, evidence: [...evidence.values()].map(row => row[0]),
+        })),
+      };
+    }
+
+    function scheduleSave() {
+      if (autosaveReady && saveTimer === null) saveTimer = setTimeout(saveProgress, 750);
+    }
+
+    function saveProgress() {
+      if (saveTimer === null) return;
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(captureProgress()));
+        if (!storageAvailable) {
+          storageAvailable = true;
+          renderPersistence();
+        }
+      } catch {
+        if (storageAvailable) {
+          storageAvailable = false;
+          renderPersistence();
+          setStatus('此浏览器无法自动保存，请导出任务报告保存进度。');
+        }
+      }
+    }
+
+    function renderPersistence() {
+      const scope = tr('任务进度只接受在该任务下新记录的数据；自由实验数据不计入。');
+      const saveNote = storageAvailable ? '实验记录和卷册进度会自动保存在此浏览器。任务报告也可作为 JSON 备份。'
+        : '此浏览器无法自动保存，请导出任务报告保存进度。';
+      $('persistence').textContent = `${scope}\n${tr(saveNote)}`;
+    }
+
+    function requireValid(condition) {
+      if (!condition) throw new Error('Invalid pendulum backup');
+    }
+
+    function validSettings(settings) {
+      return Array.isArray(settings) && settings.length === inputs.length && settings.every((value, index) => {
+        const input = inputs[index];
+        return Number.isFinite(value) && value >= Number(input.min) && value <= Number(input.max);
+      });
+    }
+
+    function readRecord(row) {
+      requireValid(Array.isArray(row) && row.length === headings.length && Number.isSafeInteger(row[0]) && row[0] > 0);
+      const values = row.slice(1).map(value => {
+        requireValid(typeof value === 'number' || (typeof value === 'string' && /^-?\d+(?:\.\d+)?$/.test(value)));
+        const number = Number(value);
+        requireValid(Number.isFinite(number));
+        return number;
+      });
+      requireValid(validSettings(values.slice(0, 3)) && values[3] > 0 && values[4] > 0);
+      const precision = [4, 4, 4, 5, 5, 3];
+      return [row[0], ...values.map((value, index) => typeof row[index + 1] === 'string' ? row[index + 1] : value.toFixed(precision[index]))];
+    }
+
+    function readFolio(source, task, evidenceRows) {
+      requireValid(source && typeof source.prediction === 'string' && typeof source.conclusion === 'string' && typeof source.done === 'boolean');
+      requireValid(Array.isArray(evidenceRows) && evidenceRows.length <= task.cases.length);
+      const evidence = new Map();
+      for (const row of evidenceRows) {
+        requireValid(row);
+        const index = task.cases.findIndex(group => group.every((value, i) => Math.abs(value - Number(row[i + 1])) < .0001));
+        requireValid(index !== -1 && !evidence.has(index));
+        evidence.set(index, row);
+      }
+      requireValid(!source.done || evidence.size === task.cases.length);
+      return { prediction: source.prediction, conclusion: source.conclusion, done: source.done, evidence };
+    }
+
+    function readMotion(motion, releaseAngle) {
+      requireValid(motion && [motion.theta, motion.omega, motion.t, motion.accumulator].every(Number.isFinite));
+      requireValid(motion.t >= 0 && motion.accumulator >= 0 && motion.accumulator < dt && Math.abs(motion.theta) <= (releaseAngle + .01) * radians);
+      requireValid(motion.crossing === null || (Number.isFinite(motion.crossing) && motion.crossing >= 0 && motion.crossing <= motion.t));
+      requireValid(Number.isSafeInteger(motion.cycles) && motion.cycles >= 0);
+      requireValid(motion.cycles === 0 ? motion.period === null : Number.isFinite(motion.period) && motion.period > 0 && motion.period <= motion.crossing);
+      requireValid(Array.isArray(motion.history) && motion.history.length > 0);
+      let previous = -1;
+      for (const point of motion.history) {
+        requireValid(Array.isArray(point) && point.length === 2 && point.every(Number.isFinite));
+        requireValid(point[0] > previous && point[0] >= Math.max(0, motion.t - 15) && point[0] <= motion.t && Math.abs(point[1]) <= releaseAngle + .01);
+        previous = point[0];
+      }
+      requireValid(previous === motion.t);
+      return motion;
+    }
+
+    function readBackup(source) {
+      requireValid(source?.version === backupVersion && Array.isArray(source.records));
+      requireValid(['zh-CN', 'zh-TW', 'en'].includes(source.language) && ['lab', 'folios'].includes(source.view));
+      const validTask = value => value === null || (Number.isInteger(value) && value >= 0 && value < tasks.length);
+      requireValid(validTask(source.activeTask) && validTask(source.lastTask) && (source.activeTask === null || source.activeTask === source.lastTask));
+      requireValid(typeof source.predictionLocked === 'boolean' && speeds.includes(source.speed) && validSettings(source.settings));
+      const restoredRecords = source.records.map((value, index) => {
+        const row = readRecord(value);
+        requireValid(row[0] === index + 1);
+        return row;
+      });
+      requireValid(Array.isArray(source.folios) && source.folios.length === tasks.length);
+      const restoredFolios = source.folios.map((folio, index) => {
+        requireValid(Array.isArray(folio?.evidence));
+        const rows = folio.evidence.map(id => Number.isSafeInteger(id) && restoredRecords[id - 1]);
+        return readFolio(folio, tasks[index], rows);
+      });
+      const second = restoredFolios[1];
+      requireValid(source.predictionLocked ? second.prediction.trim() : !second.evidence.size);
+      return { ...source, motion: readMotion(source.motion, source.settings[1]), records: restoredRecords, folios: restoredFolios };
+    }
+
+    function readLegacyReport(source) {
+      const locale = ['zh-CN', 'zh-TW', 'en'].find(code => Array.isArray(source?.[tr('任务', code)]));
+      requireValid(locale);
+      const key = label => tr(label, locale);
+      const columns = source[key('列名')];
+      const report = source[key('任务')];
+      requireValid(Array.isArray(columns) && columns.length === headings.length && columns.every(label => typeof label === 'string'));
+      requireValid(report.length === tasks.length);
+      const rowsById = new Map();
+      const restoredFolios = report.map((entry, index) => {
+        requireValid(entry && Array.isArray(entry[key('实验数据')]));
+        const rows = entry[key('实验数据')].map(value => {
+          const row = readRecord(value);
+          requireValid(!rowsById.has(row[0]));
+          rowsById.set(row[0], row);
+          return row;
+        });
+        return readFolio({ prediction: entry[key('预测')], conclusion: entry[key('结论')], done: entry[key('已完成')] }, tasks[index], rows);
+      });
+      const restoredRecords = [...rowsById.values()].sort((a, b) => a[0] - b[0]);
+      restoredRecords.forEach((row, index) => { row[0] = index + 1; });
+      const second = restoredFolios[1];
+      const locked = Boolean(second.evidence.size);
+      requireValid(!locked || second.prediction.trim());
+      return {
+        language, view: 'folios', activeTask: null, lastTask: null, predictionLocked: locked,
+        settings: defaults, speed: '1', motion: null, records: restoredRecords, folios: restoredFolios,
+      };
+    }
+
+    function restoreProgress(progress) {
+      activeTask = progress.activeTask;
+      lastTask = progress.lastTask;
+      predictionLocked = progress.predictionLocked;
+      records.length = 0;
+      for (const row of progress.records) records.push(row);
+      progress.folios.forEach((folio, index) => Object.assign(folios[index], folio));
+      pointerDrag = null;
+      loadSettings(progress.settings);
+      $('speed').value = progress.speed;
+      if (progress.motion) {
+        const { theta, omega, t, crossing, period, cycles } = progress.motion;
+        Object.assign(model, { theta, omega, t, crossing, period, cycles });
+        accumulator = progress.motion.accumulator;
+        history = progress.motion.history;
+      }
+      setView(progress.view);
+      setLanguage(progress.language, true);
+    }
+
+    function loadSavedProgress() {
+      let saved;
+      try {
+        saved = localStorage.getItem(storageKey);
+      } catch {
+        storageAvailable = false;
+        renderPersistence();
+        setStatus('此浏览器无法自动保存，请导出任务报告保存进度。');
+        return;
+      }
+      if (!saved) return;
+      try {
+        restoreProgress(readBackup(JSON.parse(saved)));
+        setStatus('已恢复上次的实验进度。');
+      } catch {
+        setStatus('无法读取上次保存的实验进度，可导入 JSON 备份继续。');
+      }
+    }
+
+    function applyImport({ progress, legacy }) {
+      restoreProgress(progress);
+      setStatus(legacy ? '已导入旧版报告中的卷册进度。' : '已导入 JSON 备份。');
+      saveProgress();
+    }
+
+    async function importReport(file) {
+      let imported;
+      try {
+        const source = JSON.parse((await file.text()).replace(/^\uFEFF/, ''));
+        const legacy = !Object.hasOwn(source, 'backup');
+        imported = { progress: legacy ? readLegacyReport(source) : readBackup(source.backup), legacy };
+      } catch {
+        showNotice('导入失败', '请选择本实验导出的 JSON 备份或任务报告。');
+        return;
+      }
+      if (records.length || predictionLocked || model.t > 0 || folios.some(folio => folio.prediction || folio.conclusion)) {
+        pendingImport = imported;
+        const dialog = $('import-confirm');
+        dialog.returnValue = 'cancel';
+        dialog.showModal();
+      } else {
+        applyImport(imported);
+      }
+    }
+
+'''
+
+
+# Draw the emblem, moving pendulum and angle-versus-time graph.
+CANVAS_DRAWING = r'''    function canvasContext(canvas) {
+      const { width, height } = canvas.getBoundingClientRect();
+      if (!width || !height) return null;
+      const density = Math.min(2, window.devicePixelRatio || 1);
+      const pixelWidth = Math.round(width * density);
+      const pixelHeight = Math.round(height * density);
+      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+        canvas.width = pixelWidth;
+        canvas.height = pixelHeight;
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(density, 0, 0, density, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      return { ctx, width, height };
+    }
+
+    function line(ctx, x1, y1, x2, y2, color, weight = 1, dash = []) {
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = weight;
+      ctx.setLineDash(dash);
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    const drawingInk = '#352B24';
+    const drawingWine = '#843E3B';
+    const drawingGold = '#B48A49';
+    const drawingEdge = '#CFB88C';
+    const drawingMuted = '#76634E';
+    const drawingUiFont = '"Microsoft JhengHei UI", "Microsoft YaHei UI", "Noto Sans CJK SC", sans-serif';
+
+    function drawRectangle(ctx, x1, y1, x2, y2, fill, outline) {
+      if (fill) {
+        ctx.fillStyle = fill;
+        ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+      }
+      if (outline) {
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = outline;
+        ctx.strokeRect(x1 + .5, y1 + .5, x2 - x1, y2 - y1);
+      }
+    }
+
+    function drawOval(ctx, x1, y1, x2, y2, fill, outline, weight = 1) {
+      ctx.beginPath();
+      ctx.ellipse((x1 + x2) / 2, (y1 + y2) / 2, (x2 - x1) / 2, (y2 - y1) / 2, 0, 0, Math.PI * 2);
+      if (fill) {
+        ctx.fillStyle = fill;
+        ctx.fill();
+      }
+      if (outline) {
+        ctx.lineWidth = weight;
+        ctx.strokeStyle = outline;
+        ctx.stroke();
+      }
+    }
+
+    function drawPolyline(ctx, points, color, weight = 1, dash = []) {
+      ctx.beginPath();
+      ctx.moveTo(...points[0]);
+      for (const point of points.slice(1)) ctx.lineTo(...point);
+      ctx.lineWidth = weight;
+      ctx.strokeStyle = color;
+      ctx.setLineDash(dash);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawLabel(ctx, text, x, y, font, color, align = 'center') {
+      ctx.font = font;
+      ctx.fillStyle = color;
+      ctx.textAlign = align;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x, y);
+    }
+
+    function drawEmblem() {
+      const emblem = $('emblem');
+      if (!emblem) return;
+      const surface = canvasContext(emblem);
+      if (!surface) return;
+      const { ctx } = surface;
+      drawOval(ctx, 5, 6, 57, 58, null, drawingGold, 2);
+      drawOval(ctx, 9, 10, 53, 54, null, drawingEdge);
+      line(ctx, 31, 15, 42, 43, drawingInk, 2);
+      line(ctx, 31, 15, 31, 49, drawingGold, 1, [2, 3]);
+      drawOval(ctx, 36, 37, 48, 49, drawingGold, '#76572D');
+      line(ctx, 22, 15, 40, 15, drawingWine, 3);
+    }
+
+    function paperBorder(ctx, width, height) {
+      drawRectangle(ctx, 1, 1, width - 2, height - 2, null, drawingEdge);
+      const corners = [
+        [7.5, 7.5, 1, 1], [width - 7.5, 7.5, -1, 1],
+        [7.5, height - 7.5, 1, -1], [width - 7.5, height - 7.5, -1, -1],
+      ];
+      for (const [x, y, dx, dy] of corners) {
+        drawPolyline(ctx, [[x, y + dy * 13], [x, y], [x + dx * 13, y]], drawingGold);
+      }
+    }
+
+    function drawStage() {
+      const surface = canvasContext($('stage'));
+      if (!surface) return;
+      const { ctx, width, height } = surface;
+      if (width < 100 || height < 100) return;
+      const px = width / 2;
+      const py = 73;
+      const scale = Math.max(15, Math.min((height - 115) / 2, (width - 180) / 3.6));
+      const radius = model.length * scale;
+      const bound = model.angle * radians;
+
+      paperBorder(ctx, width, height);
+      drawLabel(ctx, tr('运动观察'), 20, 23, 'bold 16px ' + drawingUiFont, drawingWine, 'left');
+      drawLabel(ctx, 'FIG. I', width - 22, 23, '13.33px Georgia, serif', drawingMuted, 'right');
+
+      drawOval(ctx, px - 90, py + 12, px + 90, py + 192, null, '#F0E3C8');
+      line(ctx, px - 145, py + 102, px + 145, py + 102, '#F0E3C8');
+      for (const post of [44, width - 54]) {
+        drawRectangle(ctx, post, py - 20, post + 10, height - 30, '#9D7850', '#795735');
+        line(ctx, post + 3, py - 10, post + 3, height - 35, '#B89365');
+        drawRectangle(ctx, post - 13, height - 32, post + 23, height - 26, '#795735');
+      }
+      drawRectangle(ctx, 40, py - 25, width - 40, py - 9, '#916A42', '#795735');
+      line(ctx, 44, py - 21, width - 44, py - 21, '#B49162');
+      line(ctx, 44, py - 14, width - 44, py - 14, '#7A5734');
+      for (const bolt of [49, width - 49]) {
+        drawOval(ctx, bolt - 3, py - 20, bolt + 3, py - 14, drawingGold, '#634A30');
+      }
+      drawRectangle(ctx, px - 10, py - 27, px + 10, py - 7, drawingGold, '#77572F');
+      line(ctx, px, py - 7, px, py, drawingInk, 3);
+      line(ctx, px, py, px, py + 2 * scale + 12, '#CAB991', 1, [3, 5]);
+      for (let degrees = -60; degrees <= 60; degrees += 15) {
+        const angle = degrees * radians;
+        const sin = Math.sin(angle);
+        const cos = Math.cos(angle);
+        line(ctx, px + 36 * sin, py + 36 * cos, px + 43 * sin, py + 43 * cos, '#BDA57A');
+      }
+
+      const trail = Array.from({ length: 81 }, (_, index) => {
+        const angle = -bound + 2 * bound * index / 80;
+        return [px + radius * Math.sin(angle), py + radius * Math.cos(angle)];
+      });
+      drawPolyline(ctx, trail, '#D6BC86', 2, [3, 4]);
+      drawLabel(ctx, tr('无阻力 · 定长绳 · 质点模型'), width - 22, height - 16,
+        '10.67px ' + drawingUiFont, drawingMuted, 'right');
+
+      const x = px + radius * Math.sin(model.theta);
+      const y = py + radius * Math.cos(model.theta);
+      line(ctx, px, py, x, y, '#54432E', 2);
+      drawOval(ctx, px - 4, py - 4, px + 4, py + 4, drawingInk, drawingGold);
+      drawOval(ctx, x - 15, y - 15, x + 15, y + 15, '#85612F', '#694C29');
+      drawOval(ctx, x - 13, y - 14, x + 12, y + 11, drawingGold);
+      drawOval(ctx, x - 10, y - 11, x + 6, y + 3, '#D6B56F');
+      drawOval(ctx, x - 7, y - 9, x - 1, y - 4, '#F2DDA2');
+      drawLabel(ctx, model.length.toFixed(2) + ' m', (px + x) / 2 + 38, (py + y) / 2,
+        '13.33px Georgia, serif', drawingInk);
+    }
+
+    function drawChart() {
+      const surface = canvasContext($('chart'));
+      if (!surface) return;
+      const { ctx, width, height } = surface;
+      if (width < 100 || height < 70) return;
+      const left = 48;
+      const right = width - 25;
+      const top = 42;
+      const bottom = height - 28;
+      const start = Math.max(0, model.t - 15);
+      const amplitude = Math.max(20, model.angle * 1.15);
+      const positionX = time => left + (time - start) * (right - left) / 15;
+      const positionY = angle => (top + bottom) / 2 - angle * (bottom - top) / (2 * amplitude);
+
+      paperBorder(ctx, width, height);
+      drawLabel(ctx, tr('摆角 θ（°）— 模拟时间 t（s）｜最近15秒'), 18, 20,
+        '12px ' + drawingUiFont, drawingInk, 'left');
+      for (const angle of [-amplitude, 0, amplitude]) {
+        const y = positionY(angle);
+        line(ctx, left, y, right, y, '#E6D9BE', 1, [2, 4]);
+        drawLabel(ctx, angle.toFixed(0), left - 8, y, '12px Georgia, serif', drawingMuted, 'right');
+      }
+      for (let offset = 0; offset <= 15; offset += 3) {
+        const time = start + offset;
+        const x = positionX(time);
+        line(ctx, x, top, x, bottom, '#F0E5CE');
+        drawLabel(ctx, time.toFixed(1), x, bottom + 14, '12px Georgia, serif', drawingMuted);
+      }
+      if (history.length >= 2) {
+        const points = history.map(([time, angle]) => [positionX(time), positionY(angle)]);
+        drawPolyline(ctx, points, drawingWine, 2);
+      }
+    }
+
+'''
+
+
+# Wire browser events, restore saved progress and start the animation loop.
+PAGE_STARTUP = r'''    function setLanguage(next, initial = false) {
+      language = next;
+      document.documentElement.lang = language;
+      document.querySelectorAll('[data-i]').forEach(element => { element.textContent = tr(element.dataset.i); });
+      document.querySelectorAll('[data-label]').forEach(element => { element.setAttribute('aria-label', tr(element.dataset.label)); });
+      document.querySelectorAll('[data-lang]').forEach(button => {
+        button.disabled = button.dataset.lang === language;
+        button.setAttribute('aria-pressed', String(button.disabled));
+      });
+      renderPersistence();
+      if (!initial) {
+        initialPlay = false;
+        setStatus('语言已切换，实验与任务数据已保留。');
+        scheduleSave();
+      }
+      renderRecords();
+      renderFolios();
+      renderSimulation();
+      renderStatus();
+    }
+
+    for (const input of inputs) {
+      input.addEventListener('input', updateParameters);
+      input.addEventListener('pointerdown', event => {
+        if (!event.isPrimary || event.button !== 0) return;
+        pointerDrag = { id: event.pointerId, resume: running };
+        setRunning(false);
+      });
+      input.addEventListener('keydown', event => {
+        const change = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1, Home: -Infinity, End: Infinity }[event.key];
+        if (change === undefined) return;
+        event.preventDefault();
+        const resume = running;
+        setRunning(false);
+        const low = Number(input.min);
+        const high = Number(input.max);
+        input.value = Math.min(high, Math.max(low, Number(input.value) + change * (high - low) / 100)).toFixed(4);
+        updateParameters();
+        if (resume && allowExperiment()) setRunning(true);
+      });
+    }
+    function finishDrag(event) {
+      if (!pointerDrag || pointerDrag.id !== event.pointerId) return;
+      const { resume } = pointerDrag;
+      pointerDrag = null;
+      if (resume && allowExperiment()) setRunning(true);
+    }
+    window.addEventListener('pointerup', finishDrag);
+    window.addEventListener('pointercancel', finishDrag);
+    $('earth').addEventListener('click', () => { $('gravity').value = 9.81; updateParameters(); });
+    $('moon').addEventListener('click', () => { $('gravity').value = 1.62; updateParameters(); });
+    $('defaults').addEventListener('click', () => loadSettings(defaults));
+    $('reset').addEventListener('click', () => {
+      setRunning(false);
+      resetMotion();
+      setStatus('已回到当前参数的释放位置。');
+    });
+    $('play').addEventListener('click', () => { if (running || allowExperiment()) setRunning(!running); });
+    $('step').addEventListener('click', () => {
+      if (!allowExperiment()) return;
+      setRunning(false);
+      advance(.02);
+      renderSimulation();
+    });
+    $('record').addEventListener('click', recordExperiment);
+    $('csv').addEventListener('click', exportCsv);
+    $('speed').addEventListener('change', scheduleSave);
+    $('report').addEventListener('click', exportReport);
+    $('import-report').addEventListener('click', () => $('import-file').click());
+    $('import-file').addEventListener('change', event => {
+      const [file] = event.target.files;
+      event.target.value = '';
+      if (file) importReport(file);
+    });
+    $('import-confirm').addEventListener('close', event => {
+      const imported = pendingImport;
+      pendingImport = null;
+      if (imported && event.target.returnValue === 'replace') applyImport(imported);
+    });
+    $('clear').addEventListener('click', () => {
+      records.length = 0;
+      for (const folio of folios) {
+        folio.evidence.clear();
+        folio.done = false;
+      }
+      renderRecords();
+      renderFolios();
+      setStatus('实验记录已清空。');
+      scheduleSave();
+    });
+    $('free').addEventListener('click', () => {
+      activeTask = null;
+      setRunning(false);
+      renderFolios();
+      setView('lab');
+      setStatus('自由实验模式：记录不计入任务进度。');
+    });
+    $('prediction').addEventListener('input', () => {
+      folios[activeTask].prediction = $('prediction').value;
+      scheduleSave();
+    });
+    $('conclusion').addEventListener('input', () => {
+      folios[activeTask].conclusion = $('conclusion').value;
+      scheduleSave();
+    });
+    $('complete').addEventListener('click', completeTask);
+    document.querySelectorAll('[data-lang]').forEach(button => button.addEventListener('click', () => setLanguage(button.dataset.lang)));
+    document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => setView(button.dataset.view, false)));
+
+    updateParameters();
+    setStatus('先预测，再拖动滑块。点击“开始”释放单摆。');
+    setLanguage(language, true);
+    loadSavedProgress();
+    autosaveReady = true;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') saveProgress();
+    });
+    window.addEventListener('pagehide', saveProgress);
+    drawEmblem();
+    const resize = new ResizeObserver(() => { if (view === 'lab') renderSimulation(); });
+    resize.observe($('stage'));
+    resize.observe($('chart'));
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
+'''
+
+
+# Assemble the styles, interface, translations and simulation code.
+def build_page() -> str:
+    """Return the complete HTML document."""
+    sections = (
+        PAGE_HEAD,
+        PAGE_LAYOUT,
+        TRANSLATIONS,
+        EXPERIMENT_SETUP,
+        INTERFACE_CONTROLS,
+        PENDULUM_SIMULATION,
+        EXPERIMENT_RECORDS,
+        DATA_EXPORT,
+        PROGRESS_BACKUP,
+        CANVAS_DRAWING,
+        PAGE_STARTUP,
+    )
+    return "".join(sections)
+
+
+# Generate the HTML file from the command line.
+def main() -> None:
+    parser = ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=OUTPUT_FILE,
+        help="HTML output file (default: next to this script)",
+    )
+    output = parser.parse_args().output
+    output.write_bytes(build_page().encode("utf-8"))
+    print(f"Generated {output.resolve()}")
+
+
+if __name__ == "__main__":
+    main()
